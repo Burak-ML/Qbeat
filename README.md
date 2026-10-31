@@ -1,133 +1,108 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,50:f59e0b,100:ef4444&height=200&section=header&text=Qbeat&fontSize=70&fontColor=ffffff&fontAlignY=38&desc=Discord%20Multi-Instance%20Music%20Bot&descAlignY=58&descAlign=50&animation=fadeIn" />
+# Qbeat
+
+**A Discord music bot that plays in several voice channels at once, using a main bot and a pool of worker bots.**
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
+![discord.py](https://img.shields.io/badge/discord.py-2.4-5865F2?logo=discord&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
 </div>
 
-> **"Bir bot değil, bir orkestra."**  
-> Qbeat, Discord sunucuları için geliştirilmiş, cluster mimarisiyle birden fazla sesli kanalda eş zamanlı müzik çalabilen gelişmiş bir müzik botudur.
+## Why a cluster
 
----
-
-## 💡 Fikir ve Motivasyon
-
-Mevcut Discord müzik botlarının en büyük sorunu: büyük sunucularda tek bir bot instance'ının tıkanması. Birden fazla kanalda aynı anda müzik çalmak isteyenler için bot takılıyor, gecikmeli yanıt veriyor.
-
-**Çözüm:** Cluster mimarisi. Bir "Main Bot" + N adet "Worker Bot" ile, gelen yükü bölerek çözdüm. Main bot komutları yönetir; worker botlar sesli kanallarda çalar.
-
----
-
-## 🏗️ Mimari — Cluster Sistemi
-
-```python
-class MusicBot(commands.Bot):
-    def __init__(self, is_worker=False):
-        # Main Bot: Slash komutları, senkronizasyon
-        # Worker Bot: Sesli kanal oynatma
-        self.is_worker = is_worker
-
-async def start_cluster():
-    main_bot = MusicBot(is_worker=False)
-    workers = [MusicBot(is_worker=True) for _ in WORKER_TOKENS]
-    # Hepsi asyncio.gather ile paralel çalışır
-    await asyncio.gather(*[main_bot, *workers])
-```
+A single Discord bot account can only be in one voice channel per server. To play music in several channels at the same time, Qbeat runs one **main bot** and any number of **worker bots**. The main bot handles slash commands. When someone asks for music, it hands the voice channel to a free worker, and each worker plays in its own channel. If every worker is busy, the user is told to wait.
 
 ```
-Discord Sunucusu
-│
-├── Main Bot (DISCORD_TOKEN)
-│   ├── Slash komutlarını yönetir
-│   ├── Guild'e komut senkronize eder
-│   └── Worker botlara iş dağıtır
-│
-├── Worker Bot 1 (WORKER_TOKEN_1)
-│   └── Sesli Kanal #1'de çalar
-│
-└── Worker Bot N (WORKER_TOKEN_N)
-    └── Sesli Kanal #N'de çalar
+Discord server
+  |
+  +-- Main bot (DISCORD_TOKEN)        slash commands, assigns channels to workers
+  +-- Worker bot 1 (WORKER_TOKENS)    plays in voice channel #1
+  +-- Worker bot N                    plays in voice channel #N
 ```
 
----
+## Features
 
-## ⚙️ Özellikler
+- **Interactive control panel.** `/bot-kontrol` opens a panel with buttons for previous, next, pause and resume, stop, shuffle, repeat, the queue, and adding a song or a playlist.
+- **Spotify, YouTube and links.** Search by name or paste a YouTube or Spotify link. Spotify playlists are resolved quickly and played from YouTube.
+- **Automatic suggestions.** An autoplay option queues related tracks when the queue runs out.
+- **No stored audio.** Songs are streamed with `yt-dlp` and FFmpeg and are never saved to disk.
+- **Limits you can tune.** Maximum queue size, maximum playlist size and an idle timeout that disconnects an unused bot.
+- **Slash commands only.** There is no text prefix.
+- **Container ready.** A Dockerfile is included, and the bot forces IPv4 to avoid IPv6 connection problems on Railway.
 
-- 🎵 **YouTube, Spotify, SoundCloud** desteği
-- 🔀 **Sıra yönetimi** — queue, skip, shuffle
-- 🔊 **Ses kontrolü** — volume, bass boost
-- 🎛️ **Discord Slash Commands** (`/play`, `/skip`, `/queue`...)
-- 🐳 **Docker** desteği — production-ready
-- ☁️ **Railway** deploy — IPv4 zorlamalı (IPv6 bug'ını çözdüm)
-- 📦 **Cog sistemi** — modüler komut yapısı
+## Commands
 
----
+| Command | Purpose |
+|---------|---------|
+| `/cal <song>` | Start playing a song name or a YouTube or Spotify link in your voice channel |
+| `/bot-kontrol` | Open the music control panel |
 
-## 🛠️ Tech Stack
+You must be in a voice channel to use them.
 
-| Bileşen | Teknoloji |
-|---------|-----------|
-| Bot Framework | discord.py |
-| Ses Oynatma | yt-dlp + FFmpeg |
-| Mimari | Asyncio + Cluster |
-| Deployment | Docker + Railway |
-| Komut Yapısı | Cogs (modüler) |
+## Getting started
 
----
+### Requirements
 
-## 📁 Proje Yapısı
+- Python 3.12 or later and [FFmpeg](https://ffmpeg.org)
+- A Discord application with a bot token for the main bot, plus one bot token per worker
+- Spotify client ID and secret
+- A YouTube Data API v3 key
 
-```
-discord-music-bot/
-├── bot.py          # Ana giriş — Cluster başlatıcı
-├── config.py       # Token ve ayar yönetimi
-├── cogs/
-│   └── music.py    # Tüm müzik komutları (28KB!)
-├── services/       # İş mantığı servisleri
-├── models/         # Veri modelleri
-├── views/          # Discord UI (butonlar, seçiciler)
-├── utils/          # Logger ve yardımcılar
-└── Dockerfile      # Production container
-```
+### Run locally
 
----
-
-## 🚀 Kurulum
-
-### Lokal
 ```bash
+git clone https://github.com/Burak-ML/Qbeat.git
+cd Qbeat/discord-music-bot
 pip install -r requirements.txt
 cp .env.example .env
-# .env'e DISCORD_TOKEN, WORKER_TOKENS ekle
 python bot.py
 ```
 
-### Docker
-```bash
-docker build -t qbeat .
-docker run --env-file .env qbeat
+Fill in `.env`:
+
+```env
+DISCORD_TOKEN=main bot token
+DISCORD_APPLICATION_ID=main bot application id
+WORKER_TOKENS=token1,token2     # comma separated, one per worker bot
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_CLIENT_SECRET=...
+YOUTUBE_API_KEY=...
+TEST_GUILD_ID=                  # optional, syncs slash commands to one server instantly
+LOG_LEVEL=INFO
+IDLE_TIMEOUT_SECONDS=300
+MAX_QUEUE_SIZE=500
+MAX_PLAYLIST_SIZE=300
 ```
 
----
+### Discord permissions
 
-## 🐛 Çözdüğüm İlginç Bug
+Invite every bot with the `bot` and `applications.commands` scopes and these permissions only. Administrator is not needed.
 
-Railway (cloud platform) IPv6 sorunları yaşıyordu. Discord'a bağlanırken IPv6 ile hata alıyordu. Çözüm: `socket.getaddrinfo` fonksiyonunu monkey-patch ederek sadece IPv4 yanıtlarını döndürdüm.
+View Channels, Send Messages, Embed Links, Read Message History, Connect, Speak, Use Application Commands.
 
-```python
-old_getaddrinfo = socket.getaddrinfo
-def new_getaddrinfo(*args, **kwargs):
-    responses = old_getaddrinfo(*args, **kwargs)
-    return [r for r in responses if r[0] == socket.AF_INET]
-socket.getaddrinfo = new_getaddrinfo
+### Deploy on Railway
+
+1. Push the repository to GitHub and create a Railway project from it.
+2. Add the variables from `.env.example` in the project's **Variables** tab.
+3. Railway builds the Dockerfile and starts the bot. Check the logs for the "slash commands synced" message.
+4. In Discord, run `/bot-kontrol` to confirm the commands are registered.
+
+## Project structure
+
+```
+discord-music-bot/
+  bot.py             starts the main bot and the workers
+  config.py          environment settings
+  cogs/music.py      slash commands and worker assignment
+  views/             control panel buttons and the add-song dialog
+  services/          YouTube, Spotify, audio, input parsing and recommendations
+  models/            track and per-channel player state
+  Dockerfile
 ```
 
----
+## License
 
-<div align="center">
-<img src="https://img.shields.io/badge/discord.py-Bot-5865F2?style=flat-square&logo=discord" />
-<img src="https://img.shields.io/badge/Docker-Containerized-2496ED?style=flat-square&logo=docker" />
-<img src="https://img.shields.io/badge/Railway-Deployed-0B0D0E?style=flat-square" />
-<img src="https://img.shields.io/badge/Asyncio-Cluster-3776AB?style=flat-square&logo=python" />
-
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:ef4444,50:f59e0b,100:0d1117&height=100&section=footer" />
-</div>
+MIT. See [LICENSE](LICENSE).
