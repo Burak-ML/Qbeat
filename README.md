@@ -1,15 +1,10 @@
-<div align="center">
-
 # Qbeat
 
-**A Discord music bot that plays in several voice channels at once, using a main bot and a pool of worker bots.**
+**Multi-channel Discord music playback through a controller bot and a pool of worker bots.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
-![discord.py](https://img.shields.io/badge/discord.py-2.4-5865F2?logo=discord&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+Qbeat delegates playback to separate worker accounts so multiple voice channels can run independently. Its control panel, queue management and media-provider integrations are documented below.
 
-</div>
+**Explore:** [Architecture](#why-a-cluster) · [Features](#features) · [Setup](#getting-started) · [Structure](#project-structure)
 
 ## Why a cluster
 
